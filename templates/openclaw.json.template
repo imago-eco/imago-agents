@@ -1,0 +1,152 @@
+{
+  "browser": { "enabled": true },
+  "auth": {
+    "profiles": {
+      "anthropic:default": { "provider": "anthropic", "mode": "token" }
+    }
+  },
+  "agents": {
+    "defaults": {
+      "model": { "primary": "anthropic/claude-sonnet-4-6", "fallbacks": [] },
+      "models": {
+        "anthropic/claude-sonnet-4-6": { "alias": "sonnet" },
+        "anthropic/claude-opus-4-6": { "alias": "opus" }
+      },
+      "workspace": "{{OPENCLAW_DIR}}/workspace",
+      "memorySearch": { "provider": "local", "fallback": "none" },
+      "compaction": {
+        "reserveTokens": 10000,
+        "memoryFlush": {
+          "enabled": true,
+          "softThresholdTokens": 50000,
+          "prompt": "Pre-compaction memory flush. Store durable memories now (use memory/YYYY-MM-DD.md; create memory/ if needed). IMPORTANT: If the file already exists, APPEND new content only and do not overwrite existing entries. If nothing to store, reply with NO_REPLY.\nCurrent time: {{now}}\n\nAfter saving memory, auto-compact immediately. Do NOT post compaction warnings or buttons to any Discord channel. Compaction is internal housekeeping — handle it silently."
+        }
+      },
+      "thinkingDefault": "off",
+      "heartbeat": { "every": "60m", "model": "anthropic/claude-haiku-4-5" },
+      "maxConcurrent": 4,
+      "subagents": { "maxConcurrent": 8 }
+    },
+    "list": [
+      {
+        "id": "main",
+        "name": "{{ORCHESTRATOR_NAME}}",
+        "model": "anthropic/claude-opus-4-6",
+        "subagents": { "allowAgents": ["researcher", "builder"] }
+      },
+      {
+        "id": "researcher",
+        "name": "{{RESEARCHER_NAME}}",
+        "workspace": "{{OPENCLAW_DIR}}/workspace-researcher",
+        "agentDir": "{{OPENCLAW_DIR}}/agents/researcher",
+        "model": "anthropic/claude-sonnet-4-6",
+        "tools": {
+          "deny": ["gateway", "cron", "browser", "canvas", "nodes", "tts", "session_status", "sessions_spawn", "sessions_send", "sessions_list", "sessions_history", "subagents", "agents_list"]
+        }
+      },
+      {
+        "id": "builder",
+        "name": "{{BUILDER_NAME}}",
+        "workspace": "{{OPENCLAW_DIR}}/workspace-builder",
+        "agentDir": "{{OPENCLAW_DIR}}/agents/builder",
+        "model": "anthropic/claude-sonnet-4-6",
+        "tools": {
+          "alsoAllow": ["github_create_issue", "github_get_issue", "github_list_issues", "github_update_issue", "github_add_issue_comment", "github_search_issues", "github_create_pull_request", "github_get_pull_request", "github_list_pull_requests", "github_merge_pull_request", "github_get_repository", "github_list_repositories", "github_list_commits", "github_get_file_contents", "github_create_label", "github_list_labels", "github_add_label"],
+          "deny": ["gateway", "cron", "browser", "canvas", "nodes", "tts", "session_status", "sessions_spawn", "sessions_send", "sessions_list", "sessions_history", "subagents", "agents_list"]
+        }
+      }
+    ]
+  },
+  "tools": {
+    "web": { "search": { "enabled": true, "provider": "brave" } },
+    "sessions": { "visibility": "all" },
+    "agentToAgent": { "enabled": true },
+    "exec": { "security": "full" }
+  },
+  "bindings": [
+    { "agentId": "main", "match": { "channel": "discord", "accountId": "main" } },
+    { "agentId": "researcher", "match": { "channel": "discord", "accountId": "researcher" } },
+    { "agentId": "builder", "match": { "channel": "discord", "accountId": "builder" } }
+  ],
+  "messages": { "ackReactionScope": "group-mentions" },
+  "commands": { "native": "auto", "nativeSkills": "auto", "restart": true },
+  "channels": {
+    "discord": {
+      "enabled": true,
+      "groupPolicy": "allowlist",
+      "streaming": "off",
+      "threadBindings": { "enabled": true, "spawnSubagentSessions": true },
+      "guilds": {
+        "{{GUILD_ID}}": {
+          "channels": {
+            "{{BUILDER_CHANNEL_ID}}": { "systemPrompt": "Work discipline: When given a task, ack in #general with one line, do ALL work here in your own channel, then post ONE summary (max 5 lines) back to #general when done." },
+            "{{RESEARCHER_CHANNEL_ID}}": { "systemPrompt": "Work discipline: When given a task, ack in #general with one line, do ALL work here in your own channel, then post ONE summary (max 5 lines) back to #general when done." }
+          }
+        }
+      },
+      "accounts": {
+        "main": {
+          "token": "{{ORCHESTRATOR_BOT_TOKEN}}",
+          "groupPolicy": "allowlist",
+          "streaming": "off",
+          "dmPolicy": "allowlist",
+          "allowFrom": ["{{USER_DISCORD_ID}}", "{{RESEARCHER_BOT_ID}}", "{{BUILDER_BOT_ID}}"],
+          "dm": { "enabled": true },
+          "guilds": {
+            "{{GUILD_ID}}": {
+              "channels": {
+                "{{GENERAL_CHANNEL_ID}}": { "allow": true, "requireMention": false },
+                "{{SYSTEM_CHANNEL_ID}}": { "allow": true, "requireMention": false },
+                "{{BUILDER_CHANNEL_ID}}": { "allow": true, "requireMention": false },
+                "{{RESEARCHER_CHANNEL_ID}}": { "allow": true, "requireMention": false }
+              }
+            }
+          }
+        },
+        "researcher": {
+          "token": "{{RESEARCHER_BOT_TOKEN}}",
+          "allowBots": true,
+          "groupPolicy": "allowlist",
+          "streaming": "off",
+          "dmPolicy": "allowlist",
+          "allowFrom": ["{{USER_DISCORD_ID}}", "{{ORCHESTRATOR_BOT_ID}}", "{{BUILDER_BOT_ID}}"],
+          "guilds": {
+            "{{GUILD_ID}}": {
+              "channels": {
+                "{{GENERAL_CHANNEL_ID}}": { "allow": true, "requireMention": true },
+                "{{RESEARCHER_CHANNEL_ID}}": { "allow": true, "requireMention": false },
+                "{{SYSTEM_CHANNEL_ID}}": { "allow": true, "requireMention": true }
+              }
+            }
+          },
+          "threadBindings": { "enabled": true, "spawnSubagentSessions": true }
+        },
+        "builder": {
+          "token": "{{BUILDER_BOT_TOKEN}}",
+          "allowBots": true,
+          "groupPolicy": "allowlist",
+          "streaming": "off",
+          "dmPolicy": "allowlist",
+          "allowFrom": ["{{USER_DISCORD_ID}}", "{{ORCHESTRATOR_BOT_ID}}", "{{RESEARCHER_BOT_ID}}"],
+          "guilds": {
+            "{{GUILD_ID}}": {
+              "channels": {
+                "{{GENERAL_CHANNEL_ID}}": { "allow": true, "requireMention": true },
+                "{{BUILDER_CHANNEL_ID}}": { "allow": true, "requireMention": false },
+                "{{SYSTEM_CHANNEL_ID}}": { "allow": true, "requireMention": true }
+              }
+            }
+          },
+          "threadBindings": { "enabled": true, "spawnSubagentSessions": true }
+        }
+      }
+    }
+  },
+  "gateway": {
+    "port": 18789,
+    "mode": "local",
+    "bind": "loopback",
+    "auth": { "mode": "token" },
+    "tailscale": { "mode": "off" }
+  }
+}
