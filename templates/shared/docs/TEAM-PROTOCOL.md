@@ -19,12 +19,19 @@
 
 ## 2. Channel Workflow
 
-When assigned a task:
+### Task initiation (Orchestrator → Agent)
+Orchestrator posts the **full task brief in the agent's own channel**. NOT in #general.
 
-1. **ACK in #general** — one short line ("On it")
+### Agent workflow
+1. **ACK in #general** — one short line only ("On it 🦀")
 2. **ALL work → your own channel** — progress, tool output, errors
-3. **Final deliverable → #general** — max 3-5 lines. YOU post it, not the orchestrator
+3. **Final summary → #general** — max 3-5 lines + result. YOU post it, not the orchestrator
 4. **Questions/blockers → #general** with @orchestrator or @human
+
+### What goes where
+- **#general:** acks, short summaries, questions, blockers — NOTHING ELSE
+- **Agent channel:** task briefs from orchestrator, all work output, detailed logs
+- **#system:** automated reports (health, harvest, security)
 
 Your channel is how work enters collective memory. The harvest reads it every few hours.
 
